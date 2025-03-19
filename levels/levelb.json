@@ -9,9 +9,9 @@
   "platforms": [],
   "ground_blocks": [
     {
-      "x": 11,
+      "x": 0,
       "y": 15,
-      "width": 12
+      "width": 28
     }
   ],
   "enemies": [],
@@ -23,10 +23,10 @@
   },
   "parallax": {
     "fg_scroll_rate": 1.0,
-    "bg_scroll_rate": 0.3
+    "bg_scroll_rate": 0.2
   },
   "metadata": {
-    "created": 19967,
+    "created": 35796,
     "editor_version": "1.0"
   }
 }

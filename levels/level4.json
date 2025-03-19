@@ -1,17 +1,22 @@
 {
   "dimensions": {
-    "width": 64,
+    "width": 36,
     "height": 16,
     "cell_size": 32,
-    "width_pixels": 2048,
+    "width_pixels": 1152,
     "height_pixels": 512
   },
   "platforms": [],
   "ground_blocks": [
     {
-      "x": 11,
+      "x": 0,
       "y": 15,
-      "width": 12
+      "width": 36
+    },
+    {
+      "x": 3,
+      "y": 14,
+      "width": 2
     }
   ],
   "enemies": [],
@@ -26,7 +31,7 @@
     "bg_scroll_rate": 0.3
   },
   "metadata": {
-    "created": 19967,
+    "created": 31036,
     "editor_version": "1.0"
   }
 }

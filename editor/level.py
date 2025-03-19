@@ -26,6 +26,10 @@ class Level:
         # Paths to background and foreground images
         self.bg_path = None
         self.fg_path = None
+        
+        # Parallax scroll rates
+        self.fg_scroll_rate = 1.0  # Foreground is always 1.0
+        self.bg_scroll_rate = 0.2  # Default background scroll rate
     
     def resize(self, width, height):
         """Resize the level"""
@@ -162,6 +166,10 @@ class Level:
                 'platform_image': 'resources/graphics/platform.png',
                 'enemy_types': list(self.enemy_images.keys()) if hasattr(self, 'enemy_images') else []
             },
+            'parallax': {
+                'fg_scroll_rate': getattr(self, 'fg_scroll_rate', 1.0),
+                'bg_scroll_rate': getattr(self, 'bg_scroll_rate', 0.2),
+            },
             'metadata': {
                 'created': pygame.time.get_ticks(),
                 'editor_version': '1.0'
@@ -182,3 +190,9 @@ class Level:
         self.platforms = data.get('platforms', [])
         self.ground_blocks = data.get('ground_blocks', [])
         self.enemies = data.get('enemies', [])
+        
+        # Load parallax scroll rates
+        if 'parallax' in data:
+            parallax = data['parallax']
+            self.fg_scroll_rate = parallax.get('fg_scroll_rate', 1.0)
+            self.bg_scroll_rate = parallax.get('bg_scroll_rate', 0.2)

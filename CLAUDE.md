@@ -25,11 +25,11 @@
 - Use try/except blocks for file operations and external interactions
 - Provide meaningful error messages including the specific error
 - Return to welcome screen when errors occur during loading
-- Add debug prints with format: `print(f"[DEBUG] {variable}")`
+- Add debug prints with format: `print(f"[DEBUG] {variable}")` or `print(f"[ERROR] {error_message}")`
 
 ### Coordinate Systems
 - World coordinates: absolute positions in game world (pixels)
-- Grid coordinates: positions in cell units
+- Grid coordinates: positions in cell units (cell_size)
 - Screen coordinates: positions relative to visible screen
 - UI coordinates: positions relative to UI panel
 

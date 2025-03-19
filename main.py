@@ -58,6 +58,7 @@ class LevelEditor:
         
         # Level editor state
         self.has_loaded_level = False
+        self.should_show_new_level_dialog = False
         
         # Main loop flag
         self.running = True
@@ -112,11 +113,18 @@ class LevelEditor:
             self.level.foreground.fill((50, 100, 50, 128))
             self.level.fg_path = None
         
-        # Adjust level width based on foreground width
+        # Only adjust level width based on foreground width for new levels
+        # If loading an existing level, use the saved width from the level file
         if self.level.foreground:
             fg_width = self.level.foreground.get_width()
-            self.level.width = fg_width // self.level.cell_size
-            self.level.width_pixels = fg_width
+            
+            if not self.has_loaded_level:
+                old_width = self.level.width
+                self.level.width = fg_width // self.level.cell_size
+                self.level.width_pixels = fg_width
+                print(f"[DEBUG] Adjusting level width from {old_width} to {self.level.width} cells (new level)")
+            else:
+                print(f"[DEBUG] Preserving level width at {self.level.width} cells (loaded level)")
         
         # Load platform image
         platform_path = os.path.join("resources", "graphics", "platform.png")
@@ -292,7 +300,9 @@ class LevelEditor:
     def render_background(self):
         if not self.level.background:
             return
-        parallax_factor = 0.25
+        
+        # Use custom bg_scroll_rate if available, otherwise fallback to default 0.25
+        parallax_factor = getattr(self.level, 'bg_scroll_rate', 0.25)
         
         original_clip = self.screen.get_clip()
         
@@ -336,7 +346,10 @@ class LevelEditor:
             )
             self.screen.set_clip(clip_rect)
             
-            fg_x = -self.camera.x
+            # Use custom fg_scroll_rate if available, otherwise fallback to default 1.0
+            parallax_factor = getattr(self.level, 'fg_scroll_rate', 1.0)
+            
+            fg_x = -self.camera.x * parallax_factor
             fg_width = self.level.foreground.get_width()
             
             tiles_needed = (Config.WINDOW_WIDTH // fg_width) + 2
@@ -424,8 +437,8 @@ class LevelEditor:
     def show_new_level_dialog(self):
         """Show the new level creation dialog"""
         # Create a dialog surface
-        dialog_width = 600
-        dialog_height = 450
+        dialog_width = 650  # Increased width for scroll rate dropdown
+        dialog_height = 450  # Reduced height since we removed instructions
         dialog_x = (Config.WINDOW_WIDTH - dialog_width) // 2
         dialog_y = (Config.WINDOW_HEIGHT - dialog_height) // 2
         
@@ -436,35 +449,56 @@ class LevelEditor:
         title_font = pygame.font.SysFont(None, 32)
         
         # Form fields
-        bg_path = None
         fg_path = None
+        bg_path = None
         cell_size = 32  # Default cell size
         level_width = Config.DEFAULT_LEVEL_WIDTH
         level_height = Config.DEFAULT_LEVEL_HEIGHT
+        
+        # Scroll rates
+        fg_scroll_rate = 1.0  # Fixed at 1.0
+        bg_scroll_rate = 0.2  # Default 0.2
+        
+        # Background scroll rate dropdown options
+        bg_rate_options = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+        bg_dropdown_open = False
         
         # Form state
         active_field = None
         
         # Preview surfaces
-        bg_preview = None
         fg_preview = None
+        bg_preview = None
         
         # Dialog state
         dialog_running = True
         
-        # Input field rects
-        bg_field_rect = pygame.Rect(180, 80, 250, 30)
-        fg_field_rect = pygame.Rect(180, 130, 250, 30)
+        # Input field rects - 1/2 as wide for foreground, swapped fg/bg positions
+        fg_field_rect = pygame.Rect(180, 80, 125, 30)
+        bg_field_rect = pygame.Rect(180, 130, 125, 30)
+        
+        # Scroll rate input rects - 30% less wide, moved further right
+        fg_rate_rect = pygame.Rect(480, 80, 56, 30)
+        bg_rate_rect = pygame.Rect(480, 130, 56, 30)
+        bg_dropdown_button_rect = pygame.Rect(516, 130, 20, 30)
+        
+        # Dropdown options rects - properly positioned below bg_rate_rect
+        bg_dropdown_rects = []
+        for i in range(len(bg_rate_options)):
+            bg_dropdown_rects.append(pygame.Rect(480, 160 + i*30, 56, 30))
+        
+        # Other input field rects
         cell_size_rect = pygame.Rect(180, 190, 100, 30)
         level_width_rect = pygame.Rect(180, 240, 100, 30)
         level_height_rect = pygame.Rect(180, 290, 100, 30)
         
-        # Button rects
-        bg_browse_rect = pygame.Rect(440, 80, 100, 30)
-        fg_browse_rect = pygame.Rect(440, 130, 100, 30)
-        # Position at 1/4 and 3/4 width for clear separation
-        cancel_rect = pygame.Rect(dialog_width // 4 - 50, 350, 100, 40)
-        create_rect = pygame.Rect((dialog_width * 3) // 4 - 50, 350, 100, 40)
+        # Button rects - 20% less wide
+        fg_browse_rect = pygame.Rect(315, 80, 80, 30)
+        bg_browse_rect = pygame.Rect(315, 130, 80, 30)
+        
+        # Position at 1/4 and 3/4 width for clear separation - moved down
+        cancel_rect = pygame.Rect(dialog_width // 4 - 50, 370, 100, 40)
+        create_rect = pygame.Rect((dialog_width * 3) // 4 - 50, 370, 100, 40)
         
         while dialog_running:
             # Handle events
@@ -495,15 +529,45 @@ class LevelEditor:
                         mouse_x = mouse_pos[0] - dialog_x
                         mouse_y = mouse_pos[1] - dialog_y
                         
+                        # Handle dropdown first (before other UI elements)
+                        dropdown_clicked = False
+                        
+                        # Check if dropdown button or the rate field is clicked
+                        if bg_dropdown_button_rect.collidepoint(mouse_x, mouse_y) or bg_rate_rect.collidepoint(mouse_x, mouse_y):
+                            dropdown_clicked = True
+                            bg_dropdown_open = not bg_dropdown_open
+                            print(f"[DEBUG] Dropdown toggled: {bg_dropdown_open}")
+                        
+                        # Check if one of the dropdown options is clicked
+                        option_clicked = False
+                        if bg_dropdown_open:
+                            for i, rect in enumerate(bg_dropdown_rects):
+                                if rect.collidepoint(mouse_x, mouse_y):
+                                    option_clicked = True
+                                    dropdown_clicked = True
+                                    old_rate = bg_scroll_rate
+                                    bg_scroll_rate = bg_rate_options[i]
+                                    print(f"[DEBUG] Rate changed: {old_rate} -> {bg_scroll_rate}")
+                                    bg_dropdown_open = False
+                                    break
+                                    
+                        # Only continue with other UI if the dropdown wasn't interacted with
+                        if dropdown_clicked:
+                            continue
+                        
                         # Check field clicks
                         if cell_size_rect.collidepoint(mouse_x, mouse_y):
                             active_field = "cell_size"
+                            bg_dropdown_open = False
                         elif level_width_rect.collidepoint(mouse_x, mouse_y):
                             active_field = "level_width"
+                            bg_dropdown_open = False
                         elif level_height_rect.collidepoint(mouse_x, mouse_y):
                             active_field = "level_height"
+                            bg_dropdown_open = False
                         elif bg_browse_rect.collidepoint(mouse_x, mouse_y):
                             # Browse for background image
+                            bg_dropdown_open = False
                             bg_file = self.browse_for_image_file("Select Background Image")
                             if bg_file:
                                 bg_path = bg_file
@@ -524,6 +588,7 @@ class LevelEditor:
                                     print(f"Error loading background preview: {e}")
                         elif fg_browse_rect.collidepoint(mouse_x, mouse_y):
                             # Browse for foreground image
+                            bg_dropdown_open = False
                             fg_file = self.browse_for_image_file("Select Foreground Image")
                             if fg_file:
                                 fg_path = fg_file
@@ -588,6 +653,13 @@ class LevelEditor:
                                         self.level.background = pygame.Surface((fg_width, fg_height))
                                         self.level.background.fill((100, 150, 200))  # Sky blue
                                     
+                                    # Store scroll rates
+                                    self.level.fg_scroll_rate = fg_scroll_rate
+                                    self.level.bg_scroll_rate = bg_scroll_rate
+                                    
+                                    # Reset loaded level flag since we're creating a new level
+                                    self.has_loaded_level = False
+                                    
                                     dialog_running = False
                                     return True
                                 except Exception as e:
@@ -597,7 +669,26 @@ class LevelEditor:
                                 # Display error message
                                 pass
                         else:
+                            # If not clicking on any input field, clear active field
                             active_field = None
+                            
+                            # Close dropdown only if clicking outside dropdown area AND not on dropdown toggle
+                            dropdown_area = False
+                            
+                            # Check if click is in dropdown area
+                            if bg_dropdown_open:
+                                # Check if click is in any dropdown option
+                                for rect in bg_dropdown_rects:
+                                    if rect.collidepoint(mouse_x, mouse_y):
+                                        dropdown_area = True
+                                        break
+                            
+                            # Close dropdown if clicking elsewhere (not on dropdown, not on rate rect, not on button)
+                            if (bg_dropdown_open and not dropdown_area and 
+                                not bg_rate_rect.collidepoint(mouse_x, mouse_y) and 
+                                not bg_dropdown_button_rect.collidepoint(mouse_x, mouse_y)):
+                                bg_dropdown_open = False
+                                print("[DEBUG] Dropdown closed by clicking elsewhere")
                 
                 # Handle key presses for text fields
                 elif event.type == pygame.KEYDOWN:
@@ -606,7 +697,7 @@ class LevelEditor:
                         field_values = {
                             "cell_size": str(cell_size) if cell_size > 0 else "",
                             "level_width": str(level_width) if level_width > 0 else "",
-                            "level_height": str(level_height) if level_height > 0 else ""
+                            "level_height": str(level_height) if level_height > 0 else "",
                         }
                         
                         # Handle backspace key
@@ -623,7 +714,7 @@ class LevelEditor:
                             elif active_field == "level_height":
                                 level_height = int(new_value) if new_value else 0
                         
-                        # Handle numeric input
+                        # Handle numeric input for fields
                         elif event.key >= pygame.K_0 and event.key <= pygame.K_9:
                             digit = event.key - pygame.K_0
                             current_value = field_values[active_field]
@@ -650,6 +741,7 @@ class LevelEditor:
                         # Handle escape key to cancel text entry
                         elif event.key == pygame.K_ESCAPE:
                             active_field = None
+                            bg_dropdown_open = False
             
             # Clear dialog
             dialog_surface.fill((50, 50, 50))
@@ -659,12 +751,19 @@ class LevelEditor:
             title_rect = title_surf.get_rect(centerx=dialog_width//2, y=20)
             dialog_surface.blit(title_surf, title_rect)
             
-            # Draw labels with input instructions
-            bg_label = font.render("Background Image:", True, (200, 200, 200))
-            dialog_surface.blit(bg_label, (20, 85))
-            
+            # Draw labels with input instructions - swapped foreground/background order
             fg_label = font.render("Foreground Image:", True, (200, 200, 200))
-            dialog_surface.blit(fg_label, (20, 135))
+            dialog_surface.blit(fg_label, (20, 85))
+            
+            bg_label = font.render("Background Image:", True, (200, 200, 200))
+            dialog_surface.blit(bg_label, (20, 135))
+            
+            # Draw scroll rate labels - shorter text
+            fg_rate_label = font.render("Rate:", True, (200, 200, 200))
+            dialog_surface.blit(fg_rate_label, (410, 85))
+            
+            bg_rate_label = font.render("Rate:", True, (200, 200, 200))
+            dialog_surface.blit(bg_rate_label, (410, 135))
             
             cell_label = font.render("Cell Size (px):", True, (200, 200, 200))
             dialog_surface.blit(cell_label, (20, 195))
@@ -675,29 +774,73 @@ class LevelEditor:
             height_label = font.render("Level Height (cells):", True, (200, 200, 200))
             dialog_surface.blit(height_label, (20, 295))
             
-            # Add edit instruction
-            instruction_text = "Click a field and type any value. Tab/Enter to move between fields."
-            instruction_surf = font.render(instruction_text, True, (200, 200, 150))
-            instruction_rect = instruction_surf.get_rect(centerx=dialog_width//2, y=340)
-            dialog_surface.blit(instruction_surf, instruction_rect)
+            # Get cursor flash time (toggle every 500ms)
+            cursor_visible = (pygame.time.get_ticks() % 1000) < 500
             
-            # Draw input fields
-            pygame.draw.rect(dialog_surface, (30, 30, 30), bg_field_rect)
-            pygame.draw.rect(dialog_surface, (150, 150, 150), bg_field_rect, 1)
-            bg_text = font.render(os.path.basename(bg_path) if bg_path else "No file selected", True, (255, 255, 255))
-            bg_text_rect = bg_text.get_rect(midleft=(bg_field_rect.left + 5, bg_field_rect.centery))
-            dialog_surface.blit(bg_text, bg_text_rect)
-            
+            # Draw image input fields - swapped order
             pygame.draw.rect(dialog_surface, (30, 30, 30), fg_field_rect)
             pygame.draw.rect(dialog_surface, (150, 150, 150), fg_field_rect, 1)
             fg_text = font.render(os.path.basename(fg_path) if fg_path else "No file selected", True, (255, 255, 255))
             fg_text_rect = fg_text.get_rect(midleft=(fg_field_rect.left + 5, fg_field_rect.centery))
             dialog_surface.blit(fg_text, fg_text_rect)
             
-            # Draw numeric input fields with improved text editing feedback
-            # Get cursor flash time (toggle every 500ms)
-            cursor_visible = (pygame.time.get_ticks() % 1000) < 500
+            pygame.draw.rect(dialog_surface, (30, 30, 30), bg_field_rect)
+            pygame.draw.rect(dialog_surface, (150, 150, 150), bg_field_rect, 1)
+            bg_text = font.render(os.path.basename(bg_path) if bg_path else "No file selected", True, (255, 255, 255))
+            bg_text_rect = bg_text.get_rect(midleft=(bg_field_rect.left + 5, bg_field_rect.centery))
+            dialog_surface.blit(bg_text, bg_text_rect)
             
+            # Draw scroll rate fields
+            # Foreground rate - non-editable
+            pygame.draw.rect(dialog_surface, (60, 60, 60), fg_rate_rect)  # Darker to indicate non-editable
+            pygame.draw.rect(dialog_surface, (120, 120, 120), fg_rate_rect, 1)
+            fg_rate_text = font.render(str(fg_scroll_rate), True, (200, 200, 200))
+            fg_rate_text_rect = fg_rate_text.get_rect(center=fg_rate_rect.center)
+            dialog_surface.blit(fg_rate_text, fg_rate_text_rect)
+            
+            # Background rate - dropdown box
+            pygame.draw.rect(dialog_surface, (30, 30, 30), bg_rate_rect)
+            pygame.draw.rect(dialog_surface, (150, 150, 150), bg_rate_rect, 1)
+            bg_rate_text = font.render(str(bg_scroll_rate), True, (255, 255, 255))
+            bg_rate_text_rect = bg_rate_text.get_rect(midleft=(bg_rate_rect.left + 5, bg_rate_rect.centery))
+            dialog_surface.blit(bg_rate_text, bg_rate_text_rect)
+            
+            # Draw dropdown button
+            pygame.draw.rect(dialog_surface, (50, 50, 50), bg_dropdown_button_rect)
+            pygame.draw.rect(dialog_surface, (150, 150, 150), bg_dropdown_button_rect, 1)
+            
+            # Draw dropdown arrow
+            pygame.draw.polygon(
+                dialog_surface,
+                (200, 200, 200),
+                [
+                    (bg_dropdown_button_rect.centerx, bg_dropdown_button_rect.centery + 5),
+                    (bg_dropdown_button_rect.centerx - 5, bg_dropdown_button_rect.centery - 3),
+                    (bg_dropdown_button_rect.centerx + 5, bg_dropdown_button_rect.centery - 3)
+                ]
+            )
+            
+            # Draw dropdown options if open
+            if bg_dropdown_open:
+                # Draw dropdown box with border
+                dropdown_height = len(bg_rate_options) * 30
+                dropdown_bg_rect = pygame.Rect(480, 160, 56, dropdown_height)
+                pygame.draw.rect(dialog_surface, (60, 60, 70), dropdown_bg_rect)
+                pygame.draw.rect(dialog_surface, (180, 180, 180), dropdown_bg_rect, 2)
+                
+                # Draw each option
+                for i, rect in enumerate(bg_dropdown_rects):
+                    value = bg_rate_options[i]
+                    # Highlight currently selected value
+                    bg_color = (80, 120, 180) if value == bg_scroll_rate else (50, 50, 60)
+                    pygame.draw.rect(dialog_surface, bg_color, rect)
+                    pygame.draw.rect(dialog_surface, (150, 150, 150), rect, 1)
+                    
+                    option_text = font.render(str(value), True, (255, 255, 255))
+                    option_text_rect = option_text.get_rect(center=rect.center)
+                    dialog_surface.blit(option_text, option_text_rect)
+            
+            # Draw the remaining numeric input fields
             # Cell Size field
             active_color = (40, 80, 120) if active_field == "cell_size" else (30, 30, 30)
             pygame.draw.rect(dialog_surface, active_color, cell_size_rect)
@@ -761,25 +904,25 @@ class LevelEditor:
                     2
                 )
             
-            # Draw buttons
-            pygame.draw.rect(dialog_surface, (80, 100, 120), bg_browse_rect)
-            pygame.draw.rect(dialog_surface, (150, 150, 150), bg_browse_rect, 1)
-            bg_browse_text = font.render("Browse...", True, (255, 255, 255))
-            bg_browse_text_rect = bg_browse_text.get_rect(center=bg_browse_rect.center)
-            dialog_surface.blit(bg_browse_text, bg_browse_text_rect)
-            
+            # Draw browse buttons - 20% less wide, simpler text
             pygame.draw.rect(dialog_surface, (80, 100, 120), fg_browse_rect)
             pygame.draw.rect(dialog_surface, (150, 150, 150), fg_browse_rect, 1)
-            fg_browse_text = font.render("Browse...", True, (255, 255, 255))
+            fg_browse_text = font.render("Browse", True, (255, 255, 255))
             fg_browse_text_rect = fg_browse_text.get_rect(center=fg_browse_rect.center)
             dialog_surface.blit(fg_browse_text, fg_browse_text_rect)
             
-            # Draw previews if available
-            if bg_preview:
-                dialog_surface.blit(bg_preview, (bg_field_rect.right + 10, bg_field_rect.centery - bg_preview.get_height() // 2))
+            pygame.draw.rect(dialog_surface, (80, 100, 120), bg_browse_rect)
+            pygame.draw.rect(dialog_surface, (150, 150, 150), bg_browse_rect, 1)
+            bg_browse_text = font.render("Browse", True, (255, 255, 255))
+            bg_browse_text_rect = bg_browse_text.get_rect(center=bg_browse_rect.center)
+            dialog_surface.blit(bg_browse_text, bg_browse_text_rect)
             
+            # Draw previews if available
             if fg_preview:
                 dialog_surface.blit(fg_preview, (fg_field_rect.right + 10, fg_field_rect.centery - fg_preview.get_height() // 2))
+            
+            if bg_preview:
+                dialog_surface.blit(bg_preview, (bg_field_rect.right + 10, bg_field_rect.centery - bg_preview.get_height() // 2))
             
             # Draw bottom buttons
             pygame.draw.rect(dialog_surface, (150, 50, 50), cancel_rect)
@@ -1189,13 +1332,17 @@ class LevelEditor:
                 mouse_pos = event.pos
                 
                 if self.welcome_buttons['new'].collidepoint(mouse_pos):
-                    created = self.show_new_level_dialog()
-                    # The above is not fully implemented in this snippet,
-                    # but presumably sets self.has_loaded_level, etc.
-                    if created:
-                        print("[STATE] New level created, transitioning to editor")
-                        self.has_loaded_level = True
-                        state_change_requested = AppState.LEVEL_EDITOR
+                    try:
+                        # Call the original function directly to avoid attribute problems
+                        # This bypasses any instance attribute overriding
+                        created = LevelEditor.show_new_level_dialog(self)
+                        if created:
+                            print("[STATE] New level created, transitioning to editor")
+                            self.has_loaded_level = True
+                            state_change_requested = AppState.LEVEL_EDITOR
+                    except Exception as e:
+                        print(f"[ERROR] Could not show new level dialog: {e}")
+                        
                     return
                 
                 elif self.welcome_buttons['load'].collidepoint(mouse_pos):
@@ -1215,6 +1362,9 @@ class LevelEditor:
                                             self.level.background = pygame.image.load(self.level.bg_path).convert_alpha()
                                         if self.level.fg_path and os.path.exists(self.level.fg_path):
                                             self.level.foreground = pygame.image.load(self.level.fg_path).convert_alpha()
+                                        
+                                        # Set flag to indicate we're loading an existing level
+                                        self.has_loaded_level = True
                                         
                                         # Make sure to trigger assets to load properly
                                         self.load_assets(self.level.bg_path, self.level.fg_path)

@@ -21,6 +21,10 @@
     "platform_image": "resources/graphics/platform.png",
     "enemy_types": []
   },
+  "parallax": {
+    "fg_scroll_rate": 1.0,
+    "bg_scroll_rate": 0.2
+  },
   "metadata": {
     "created": 15424,
     "editor_version": "1.0"

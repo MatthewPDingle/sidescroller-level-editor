@@ -1,17 +1,32 @@
 {
   "dimensions": {
-    "width": 64,
+    "width": 48,
     "height": 16,
     "cell_size": 32,
-    "width_pixels": 2048,
+    "width_pixels": 1536,
     "height_pixels": 512
   },
   "platforms": [],
   "ground_blocks": [
     {
-      "x": 11,
+      "x": 0,
       "y": 15,
-      "width": 12
+      "width": 10
+    },
+    {
+      "x": 9,
+      "y": 15,
+      "width": 39
+    },
+    {
+      "x": 10,
+      "y": 15,
+      "width": 3
+    },
+    {
+      "x": 8,
+      "y": 15,
+      "width": 1
     }
   ],
   "enemies": [],
@@ -23,10 +38,10 @@
   },
   "parallax": {
     "fg_scroll_rate": 1.0,
-    "bg_scroll_rate": 0.3
+    "bg_scroll_rate": 0.2
   },
   "metadata": {
-    "created": 19967,
+    "created": 35436,
     "editor_version": "1.0"
   }
 }

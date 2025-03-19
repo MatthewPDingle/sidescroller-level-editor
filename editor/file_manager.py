@@ -80,12 +80,33 @@ class FileManager:
             
             self.level.from_dict(level_data)
             
-            if 'bg_path' in level_data:
+            # Check for asset paths in the assets section
+            if 'assets' in level_data and level_data['assets']:
+                assets = level_data['assets']
+                
+                # Load background
+                if 'background' in assets and assets['background']:
+                    self.level.bg_path = assets['background']
+                    if os.path.exists(self.level.bg_path):
+                        self.level.background = pygame.image.load(self.level.bg_path).convert_alpha()
+                    else:
+                        print(f"Warning: Background image not found at {self.level.bg_path}")
+                
+                # Load foreground
+                if 'foreground' in assets and assets['foreground']:
+                    self.level.fg_path = assets['foreground']
+                    if os.path.exists(self.level.fg_path):
+                        self.level.foreground = pygame.image.load(self.level.fg_path).convert_alpha()
+                    else:
+                        print(f"Warning: Foreground image not found at {self.level.fg_path}")
+                
+            # Backward compatibility for older format
+            elif 'bg_path' in level_data:
                 self.level.bg_path = level_data['bg_path']
                 if os.path.exists(self.level.bg_path):
                     self.level.background = pygame.image.load(self.level.bg_path).convert_alpha()
             
-            if 'fg_path' in level_data:
+            elif 'fg_path' in level_data:
                 self.level.fg_path = level_data['fg_path']
                 if os.path.exists(self.level.fg_path):
                     self.level.foreground = pygame.image.load(self.level.fg_path).convert_alpha()
@@ -95,6 +116,10 @@ class FileManager:
             editor = LevelEditor.instance
             if editor:
                 editor.has_loaded_level = True
+                
+                # Print debug info about dimensions
+                print(f"[DEBUG] Loaded level dimensions: {self.level.width}x{self.level.height} cells")
+                print(f"[DEBUG] Pixel dimensions: {self.level.width_pixels}x{self.level.height_pixels} px")
             
             return True
         
