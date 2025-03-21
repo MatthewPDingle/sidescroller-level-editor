@@ -1,129 +1,69 @@
 {
   "dimensions": {
-    "width": 96,
+    "width": 128,
     "height": 16,
     "cell_size": 32,
-    "width_pixels": 3072,
+    "width_pixels": 4096,
     "height_pixels": 512
   },
   "platforms": [
     {
-      "x": 23,
-      "y": 14,
-      "width": 4,
-      "height": 1
-    },
-    {
-      "x": 27,
+      "x": 18,
       "y": 13,
       "width": 4,
       "height": 1
     },
     {
-      "x": 31,
-      "y": 14,
-      "width": 4,
-      "height": 1
-    },
-    {
-      "x": 64,
-      "y": 14,
-      "width": 1,
-      "height": 1
-    },
-    {
-      "x": 65,
-      "y": 13,
-      "width": 1,
-      "height": 1
-    },
-    {
-      "x": 66,
+      "x": 22,
       "y": 12,
-      "width": 1,
+      "width": 4,
       "height": 1
     },
     {
-      "x": 67,
+      "x": 26,
       "y": 11,
-      "width": 1,
+      "width": 4,
       "height": 1
     },
     {
-      "x": 68,
+      "x": 30,
       "y": 10,
-      "width": 1,
+      "width": 4,
       "height": 1
     },
     {
-      "x": 69,
+      "x": 34,
       "y": 9,
-      "width": 1,
+      "width": 4,
       "height": 1
     },
     {
-      "x": 70,
+      "x": 38,
       "y": 8,
-      "width": 1,
+      "width": 4,
       "height": 1
     },
     {
-      "x": 71,
-      "y": 7,
-      "width": 1,
+      "x": 42,
+      "y": 11,
+      "width": 2,
       "height": 1
     },
     {
-      "x": 72,
-      "y": 6,
-      "width": 1,
-      "height": 1
-    },
-    {
-      "x": 73,
-      "y": 5,
-      "width": 1,
-      "height": 1
-    },
-    {
-      "x": 78,
-      "y": 5,
-      "width": 1,
-      "height": 1
-    },
-    {
-      "x": 79,
-      "y": 6,
-      "width": 1,
-      "height": 1
-    },
-    {
-      "x": 80,
-      "y": 7,
-      "width": 1,
-      "height": 1
-    },
-    {
-      "x": 81,
-      "y": 8,
-      "width": 1,
-      "height": 1
-    },
-    {
-      "x": 82,
-      "y": 9,
-      "width": 1,
+      "x": 44,
+      "y": 14,
+      "width": 2,
       "height": 1
     },
     {
       "x": 83,
-      "y": 10,
+      "y": 14,
       "width": 1,
       "height": 1
     },
     {
       "x": 84,
-      "y": 11,
+      "y": 13,
       "width": 1,
       "height": 1
     },
@@ -135,12 +75,60 @@
     },
     {
       "x": 86,
-      "y": 13,
+      "y": 11,
       "width": 1,
       "height": 1
     },
     {
       "x": 87,
+      "y": 10,
+      "width": 1,
+      "height": 1
+    },
+    {
+      "x": 88,
+      "y": 9,
+      "width": 1,
+      "height": 1
+    },
+    {
+      "x": 89,
+      "y": 8,
+      "width": 1,
+      "height": 1
+    },
+    {
+      "x": 90,
+      "y": 9,
+      "width": 1,
+      "height": 1
+    },
+    {
+      "x": 91,
+      "y": 10,
+      "width": 1,
+      "height": 1
+    },
+    {
+      "x": 92,
+      "y": 11,
+      "width": 1,
+      "height": 1
+    },
+    {
+      "x": 93,
+      "y": 12,
+      "width": 1,
+      "height": 1
+    },
+    {
+      "x": 94,
+      "y": 13,
+      "width": 1,
+      "height": 1
+    },
+    {
+      "x": 95,
       "y": 14,
       "width": 1,
       "height": 1
@@ -150,33 +138,36 @@
     {
       "x": 0,
       "y": 15,
-      "width": 96
+      "width": 128
     }
   ],
   "enemies": [
     {
-      "x": 49,
-      "y": 9,
+      "x": 19,
+      "y": 5,
       "type": "armadillo"
     },
     {
-      "x": 18,
-      "y": 8,
+      "x": 66,
+      "y": 7,
       "type": "armadillo"
     }
   ],
   "assets": {
-    "background": "resources/graphics/background_2048_512.png",
-    "foreground": "resources/graphics/foreground_2048_512.png",
+    "background": "T:\\Dev\\sidescroller-level-editor\\resources\\graphics\\background_2048_512.png",
+    "foreground": "T:\\Dev\\sidescroller-level-editor\\resources\\graphics\\foreground_2048_512.png",
     "platform_image": "resources/graphics/platform.png",
-    "enemy_types": []
+    "enemy_types": [
+      "armadillo",
+      "scientist"
+    ]
   },
   "parallax": {
     "fg_scroll_rate": 1.0,
     "bg_scroll_rate": 0.2
   },
   "metadata": {
-    "created": 118516,
+    "created": 45654,
     "editor_version": "1.0"
   }
 }

@@ -86,30 +86,56 @@ class FileManager:
                 
                 # Load background
                 if 'background' in assets and assets['background']:
-                    self.level.bg_path = assets['background']
-                    if os.path.exists(self.level.bg_path):
-                        self.level.background = pygame.image.load(self.level.bg_path).convert_alpha()
+                    # Store the relative path from the JSON
+                    relative_bg_path = assets['background']
+                    self.level.bg_path = relative_bg_path
+                    
+                    # If it's a relative path starting with "resources", use it directly
+                    if os.path.exists(relative_bg_path):
+                        self.level.background = pygame.image.load(relative_bg_path).convert_alpha()
                     else:
-                        print(f"Warning: Background image not found at {self.level.bg_path}")
+                        print(f"Warning: Background image not found at {relative_bg_path}")
                 
                 # Load foreground
                 if 'foreground' in assets and assets['foreground']:
-                    self.level.fg_path = assets['foreground']
-                    if os.path.exists(self.level.fg_path):
-                        self.level.foreground = pygame.image.load(self.level.fg_path).convert_alpha()
+                    # Store the relative path from the JSON
+                    relative_fg_path = assets['foreground']
+                    self.level.fg_path = relative_fg_path
+                    
+                    # If it's a relative path starting with "resources", use it directly
+                    if os.path.exists(relative_fg_path):
+                        self.level.foreground = pygame.image.load(relative_fg_path).convert_alpha()
                     else:
-                        print(f"Warning: Foreground image not found at {self.level.fg_path}")
+                        print(f"Warning: Foreground image not found at {relative_fg_path}")
                 
             # Backward compatibility for older format
             elif 'bg_path' in level_data:
-                self.level.bg_path = level_data['bg_path']
+                # For older format, convert to relative path if needed
+                path = level_data['bg_path']
+                if "resources" in path:
+                    resources_index = path.find("resources")
+                    if resources_index != -1:
+                        path = path[resources_index:]
+                
+                self.level.bg_path = path
                 if os.path.exists(self.level.bg_path):
                     self.level.background = pygame.image.load(self.level.bg_path).convert_alpha()
+                else:
+                    print(f"Warning: Background image not found at {self.level.bg_path}")
             
             elif 'fg_path' in level_data:
-                self.level.fg_path = level_data['fg_path']
+                # For older format, convert to relative path if needed
+                path = level_data['fg_path']
+                if "resources" in path:
+                    resources_index = path.find("resources")
+                    if resources_index != -1:
+                        path = path[resources_index:]
+                
+                self.level.fg_path = path
                 if os.path.exists(self.level.fg_path):
                     self.level.foreground = pygame.image.load(self.level.fg_path).convert_alpha()
+                else:
+                    print(f"Warning: Foreground image not found at {self.level.fg_path}")
             
             print(f"Level loaded from {filepath}")
             from main import LevelEditor

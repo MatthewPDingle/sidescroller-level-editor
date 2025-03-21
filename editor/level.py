@@ -148,6 +148,24 @@ class Level:
     
     def to_dict(self):
         """Convert level data to a dictionary"""
+        # Function to convert absolute paths to relative paths
+        def make_relative_path(path):
+            if not path:
+                return None
+                
+            # Convert backslashes to forward slashes for consistency
+            path = path.replace("\\", "/")
+            
+            # Extract the relative path starting from "resources"
+            if "resources" in path:
+                # Find the index of "resources" in the path
+                resources_index = path.find("resources")
+                if resources_index != -1:
+                    return path[resources_index:]
+            
+            # If we can't find "resources" in the path, return the original path
+            return path
+            
         # Create level dictionary following the design spec structure
         level_data = {
             'dimensions': {
@@ -161,8 +179,8 @@ class Level:
             'ground_blocks': self.ground_blocks,
             'enemies': self.enemies,
             'assets': {
-                'background': self.bg_path if hasattr(self, 'bg_path') else None,
-                'foreground': self.fg_path if hasattr(self, 'fg_path') else None,
+                'background': make_relative_path(self.bg_path) if hasattr(self, 'bg_path') else None,
+                'foreground': make_relative_path(self.fg_path) if hasattr(self, 'fg_path') else None,
                 'platform_image': 'resources/graphics/platform.png',
                 'enemy_types': list(self.enemy_images.keys()) if hasattr(self, 'enemy_images') else []
             },
