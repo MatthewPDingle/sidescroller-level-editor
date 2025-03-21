@@ -306,26 +306,29 @@ class LevelEditor:
         
         original_clip = self.screen.get_clip()
         
-        level_end_x = self.level.width_pixels - self.camera.x
+        # Always ensure the background is visible regardless of camera position
+        clip_rect = pygame.Rect(
+            0, 
+            Config.UI_PANEL_HEIGHT,
+            Config.WINDOW_WIDTH,
+            Config.WINDOW_HEIGHT - Config.UI_PANEL_HEIGHT
+        )
+        self.screen.set_clip(clip_rect)
         
-        if level_end_x > 0:
-            clip_rect = pygame.Rect(
-                0, 
-                Config.UI_PANEL_HEIGHT,
-                min(level_end_x, Config.WINDOW_WIDTH),
-                Config.WINDOW_HEIGHT - Config.UI_PANEL_HEIGHT
-            )
-            self.screen.set_clip(clip_rect)
+        # Calculate the starting position for the leftmost tile
+        raw_offset = -self.camera.x * parallax_factor
+        bg_width = self.level.background.get_width()
+        
+        # Calculate a start_x that ensures tiling starts at or before x=0
+        start_x = raw_offset % bg_width
+        if start_x > 0:
+            start_x -= bg_width
             
-            bg_x = -self.camera.x * parallax_factor
-            bg_width = self.level.background.get_width()
-            
-            tiles_needed = (Config.WINDOW_WIDTH // bg_width) + 2
-            
-            for i in range(tiles_needed):
-                pos_x = (bg_x % bg_width) + (i * bg_width)
-                if pos_x < Config.WINDOW_WIDTH and pos_x + bg_width > 0:
-                    self.screen.blit(self.level.background, (pos_x, Config.UI_PANEL_HEIGHT))
+        # Draw tiles until we cover the entire window width
+        x = start_x
+        while x < Config.WINDOW_WIDTH:
+            self.screen.blit(self.level.background, (x, Config.UI_PANEL_HEIGHT))
+            x += bg_width
         
         self.screen.set_clip(original_clip)
     
@@ -335,30 +338,32 @@ class LevelEditor:
         
         original_clip = self.screen.get_clip()
         
-        level_end_x = self.level.width_pixels - self.camera.x
+        # Always ensure the foreground is visible regardless of camera position
+        clip_rect = pygame.Rect(
+            0, 
+            Config.UI_PANEL_HEIGHT,
+            Config.WINDOW_WIDTH,
+            Config.WINDOW_HEIGHT - Config.UI_PANEL_HEIGHT
+        )
+        self.screen.set_clip(clip_rect)
         
-        if level_end_x > 0:
-            clip_rect = pygame.Rect(
-                0, 
-                Config.UI_PANEL_HEIGHT,
-                min(level_end_x, Config.WINDOW_WIDTH),
-                Config.WINDOW_HEIGHT - Config.UI_PANEL_HEIGHT
-            )
-            self.screen.set_clip(clip_rect)
+        # Use custom fg_scroll_rate if available, otherwise fallback to default 1.0
+        parallax_factor = getattr(self.level, 'fg_scroll_rate', 1.0)
+        
+        # Calculate the starting position for the leftmost tile
+        raw_offset = -self.camera.x * parallax_factor
+        fg_width = self.level.foreground.get_width()
+        
+        # Calculate a start_x that ensures tiling starts at or before x=0
+        start_x = raw_offset % fg_width
+        if start_x > 0:
+            start_x -= fg_width
             
-            # Use custom fg_scroll_rate if available, otherwise fallback to default 1.0
-            parallax_factor = getattr(self.level, 'fg_scroll_rate', 1.0)
-            
-            fg_x = -self.camera.x * parallax_factor
-            fg_width = self.level.foreground.get_width()
-            
-            tiles_needed = (Config.WINDOW_WIDTH // fg_width) + 2
-            
-            for i in range(tiles_needed):
-                pos_x = (fg_x % fg_width) + (i * fg_width)
-                
-                if pos_x < Config.WINDOW_WIDTH and pos_x + fg_width > 0:
-                    self.screen.blit(self.level.foreground, (pos_x, Config.UI_PANEL_HEIGHT))
+        # Draw tiles until we cover the entire window width
+        x = start_x
+        while x < Config.WINDOW_WIDTH:
+            self.screen.blit(self.level.foreground, (x, Config.UI_PANEL_HEIGHT))
+            x += fg_width
         
         self.screen.set_clip(original_clip)
     
