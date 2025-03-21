@@ -77,7 +77,7 @@ class Level:
         }
         self.ground_blocks.append(ground)
     
-    def add_enemy(self, x, y, enemy_type="armadillo"):
+    def add_enemy(self, x, y, enemy_type="armadillo_warrior"):
         """Add an enemy to the level"""
         enemy = {
             'x': x,
@@ -85,6 +85,19 @@ class Level:
             'type': enemy_type
         }
         self.enemies.append(enemy)
+        
+        # Make sure to load the enemy image if it's not already loaded
+        if enemy_type not in self.enemy_images:
+            try:
+                from editor.utils.assets import load_sprite_sheet
+                enemy_path = f"resources/graphics/characters/{enemy_type}_ss.png"
+                self.enemy_images[enemy_type] = load_sprite_sheet(enemy_path, 32, 32)[0]
+            except Exception as e:
+                print(f"[ERROR] Could not load enemy image for {enemy_type}: {e}")
+                # Create a placeholder
+                placeholder = pygame.Surface((32, 32))
+                placeholder.fill((255, 0, 255))  # Magenta for missing textures
+                self.enemy_images[enemy_type] = placeholder
     
     def delete_at(self, grid_x, grid_y):
         """Delete any elements at the given grid position"""

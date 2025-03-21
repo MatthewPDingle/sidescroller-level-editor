@@ -1,5 +1,6 @@
 import os
 import pygame
+import glob
 
 def load_image(path, alpha=True):
     """Load an image from the given path"""
@@ -40,3 +41,23 @@ def load_sprite_sheet(path, sprite_width, sprite_height, alpha=True):
         placeholder = pygame.Surface((sprite_width, sprite_height))
         placeholder.fill((255, 0, 255))  # Magenta for missing textures
         return [placeholder]
+
+def scan_character_spritesheets(directory="resources/graphics/characters"):
+    """Scan the characters directory for spritesheets and return them categorized"""
+    characters = []
+    
+    # Get all sprite sheets in the directory
+    sprite_sheets = glob.glob(os.path.join(directory, "*_ss.png"))
+    
+    for sheet_path in sorted(sprite_sheets):
+        # Extract character name from filename
+        filename = os.path.basename(sheet_path)
+        character_name = filename.replace("_ss.png", "")
+        
+        characters.append({
+            "name": character_name,
+            "path": sheet_path,
+            "display_name": character_name.replace("_", " ").title()
+        })
+    
+    return characters

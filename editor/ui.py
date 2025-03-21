@@ -560,6 +560,12 @@ class UIManager:
                 return True
             elif event.key == pygame.K_3:
                 self.tool_manager.set_tool("enemy")
+                # Show a hint about character selection
+                hint_dialog = ModalDialog("Character Selection", ["Press 'C' while using the Enemy Tool", "to open the character selector"])
+                hint_dialog.add_button("OK", True, color=(50, 120, 50),
+                                      x=hint_dialog.width//2 - 50,
+                                      y=hint_dialog.height - 60)
+                self.active_dialog = hint_dialog
                 return True
             elif event.key == pygame.K_4:
                 self.tool_manager.set_tool("delete")

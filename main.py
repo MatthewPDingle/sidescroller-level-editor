@@ -158,13 +158,20 @@ class LevelEditor:
         # For now, just create placeholder sprites
         self.level.enemy_images = {}
         
-        armadillo_path = os.path.join("resources", "graphics", "characters", "armadillo_warrior_ss.png")
-        if os.path.exists(armadillo_path):
-            self.level.enemy_images["armadillo"] = self.load_sprite_sheet(armadillo_path, 32, 32)[0]
+        # Load enemy sprites from the characters directory
+        from editor.utils.assets import scan_character_spritesheets, load_sprite_sheet
+        character_list = scan_character_spritesheets()
         
-        scientist_path = os.path.join("resources", "graphics", "characters", "scientist_ss.png")
-        if os.path.exists(scientist_path):
-            self.level.enemy_images["scientist"] = self.load_sprite_sheet(scientist_path, 32, 32)[0]
+        for char in character_list:
+            try:
+                if os.path.exists(char["path"]):
+                    self.level.enemy_images[char["name"]] = load_sprite_sheet(char["path"], 32, 32)[0]
+            except Exception as e:
+                print(f"[ERROR] Could not load sprite for {char['name']}: {e}")
+                # Create a placeholder sprite
+                sprite = pygame.Surface((32, 32))
+                sprite.fill((255, 0, 255))
+                self.level.enemy_images[char["name"]] = sprite
             
         # Set has_loaded_level flag
         if self.level.background and self.level.foreground:

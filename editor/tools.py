@@ -187,7 +187,8 @@ class GroundTool(Tool):
 class EnemyTool(Tool):
     def __init__(self, level, grid):
         super().__init__(level, grid)
-        self.enemy_type = "armadillo"  # Default enemy type
+        self.enemy_type = "armadillo_warrior"  # Default enemy type
+        self.character_selector = None  # Will be set by ToolManager
     
     def handle_event(self, event, camera):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -304,6 +305,191 @@ class DeleteTool(Tool):
         pygame.draw.line(surface, (255, 0, 0, 128), (screen_x, screen_y), (screen_x + size, screen_y + size), 2)
         pygame.draw.line(surface, (255, 0, 0, 128), (screen_x + size, screen_y), (screen_x, screen_y + size), 2)
 
+class CharacterSelector:
+    """A UI component for selecting character types"""
+    def __init__(self, level):
+        self.level = level
+        self.characters = []
+        self.selected_index = 0
+        self.visible = False
+        self.rect = pygame.Rect(0, 0, 200, 300)  # Default size and position
+        self.scroll_offset = 0
+        self.max_visible = 6
+        
+        # Load character list
+        from editor.utils.assets import scan_character_spritesheets
+        self.characters = scan_character_spritesheets()
+        
+        # Load preview images
+        self.load_preview_images()
+        
+        # Default to first character if available
+        if self.characters:
+            self.selected_character = self.characters[0]
+        else:
+            self.selected_character = {"name": "armadillo_warrior", "path": ""}
+    
+    def load_preview_images(self):
+        """Load preview images for all characters"""
+        for char in self.characters:
+            try:
+                # Load the first frame of each sprite sheet for preview
+                sheet = pygame.image.load(char["path"]).convert_alpha()
+                char["preview"] = sheet.subsurface((0, 0, 32, 32))
+            except Exception as e:
+                print(f"[ERROR] Could not load preview for {char['name']}: {e}")
+                # Create a placeholder
+                placeholder = pygame.Surface((32, 32))
+                placeholder.fill((255, 0, 255))  # Magenta
+                char["preview"] = placeholder
+    
+    def toggle_visibility(self):
+        """Toggle the visibility of the character selector"""
+        self.visible = not self.visible
+    
+    def get_selected_character(self):
+        """Get currently selected character"""
+        if self.characters and self.selected_index < len(self.characters):
+            return self.characters[self.selected_index]["name"]
+        return "armadillo_warrior"  # Default fallback
+    
+    def handle_event(self, event, tool):
+        """Handle events for the character selector"""
+        if not self.visible:
+            # Check if the character hotkey was pressed to show selector
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_c:
+                self.toggle_visibility()
+                # Position selector near mouse
+                mouse_x, mouse_y = pygame.mouse.get_pos()
+                self.rect.x = min(mouse_x, pygame.display.get_surface().get_width() - self.rect.width)
+                self.rect.y = min(mouse_y, pygame.display.get_surface().get_height() - self.rect.height)
+                return True
+            return False
+        
+        # When visible, handle interactions
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                self.visible = False
+                return True
+        
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            mouse_pos = event.pos
+            
+            # If clicked outside selector, hide it
+            if not self.rect.collidepoint(mouse_pos):
+                self.visible = False
+                return True
+            
+            # Check for character selection
+            for i in range(min(self.max_visible, len(self.characters) - self.scroll_offset)):
+                idx = i + self.scroll_offset
+                item_rect = pygame.Rect(
+                    self.rect.x + 10, 
+                    self.rect.y + 40 + i * 40,
+                    self.rect.width - 20,
+                    36
+                )
+                
+                if item_rect.collidepoint(mouse_pos):
+                    self.selected_index = idx
+                    tool.set_enemy_type(self.characters[idx]["name"])
+                    self.visible = False  # Auto-hide after selection
+                    return True
+            
+            # Handle scrolling buttons
+            up_btn_rect = pygame.Rect(self.rect.x + self.rect.width - 40, self.rect.y + 10, 30, 20)
+            down_btn_rect = pygame.Rect(self.rect.x + self.rect.width - 40, 
+                                       self.rect.y + self.rect.height - 30, 30, 20)
+            
+            if up_btn_rect.collidepoint(mouse_pos) and self.scroll_offset > 0:
+                self.scroll_offset -= 1
+                return True
+            elif down_btn_rect.collidepoint(mouse_pos) and \
+                 self.scroll_offset < len(self.characters) - self.max_visible:
+                self.scroll_offset += 1
+                return True
+        
+        elif event.type == pygame.MOUSEWHEEL:
+            if self.rect.collidepoint(pygame.mouse.get_pos()):
+                if event.y > 0 and self.scroll_offset > 0:  # Scroll up
+                    self.scroll_offset -= 1
+                    return True
+                elif event.y < 0 and self.scroll_offset < len(self.characters) - self.max_visible:  # Scroll down
+                    self.scroll_offset += 1
+                    return True
+        
+        return True
+    
+    def render(self, surface):
+        """Render the character selector if visible"""
+        if not self.visible or not self.characters:
+            return
+        
+        # Draw the selector panel
+        panel_surface = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+        pygame.draw.rect(panel_surface, (50, 50, 50, 230), 
+                         (0, 0, self.rect.width, self.rect.height))
+        pygame.draw.rect(panel_surface, (150, 150, 150, 200), 
+                         (0, 0, self.rect.width, self.rect.height), 2)
+        
+        # Draw title
+        font_title = pygame.font.SysFont(None, 24)
+        title_text = font_title.render("Select Character", True, (255, 255, 255))
+        panel_surface.blit(title_text, (self.rect.width // 2 - title_text.get_width() // 2, 10))
+        
+        # Draw character options
+        font = pygame.font.SysFont(None, 20)
+        for i in range(min(self.max_visible, len(self.characters) - self.scroll_offset)):
+            idx = i + self.scroll_offset
+            char = self.characters[idx]
+            
+            # Draw item background (highlight if selected)
+            item_rect = pygame.Rect(10, 40 + i * 40, self.rect.width - 20, 36)
+            if idx == self.selected_index:
+                pygame.draw.rect(panel_surface, (80, 120, 200, 200), item_rect)
+            else:
+                pygame.draw.rect(panel_surface, (60, 60, 60, 200), item_rect)
+            pygame.draw.rect(panel_surface, (180, 180, 180, 150), item_rect, 1)
+            
+            # Draw character preview image
+            if "preview" in char:
+                preview_rect = char["preview"].get_rect(midleft=(item_rect.left + 5, item_rect.centery))
+                panel_surface.blit(char["preview"], preview_rect)
+            
+            # Draw character name
+            text = font.render(char["display_name"], True, (255, 255, 255))
+            text_rect = text.get_rect(midleft=(item_rect.left + 45, item_rect.centery))
+            panel_surface.blit(text, text_rect)
+        
+        # Draw scroll indicators if needed
+        if self.scroll_offset > 0:
+            # Up arrow
+            up_btn_rect = pygame.Rect(self.rect.width - 40, 10, 30, 20)
+            pygame.draw.rect(panel_surface, (80, 80, 80, 200), up_btn_rect)
+            pygame.draw.rect(panel_surface, (180, 180, 180, 150), up_btn_rect, 1)
+            pygame.draw.polygon(panel_surface, (255, 255, 255),
+                              [(up_btn_rect.centerx, up_btn_rect.top + 5),
+                               (up_btn_rect.centerx - 8, up_btn_rect.bottom - 5),
+                               (up_btn_rect.centerx + 8, up_btn_rect.bottom - 5)])
+        
+        if self.scroll_offset < len(self.characters) - self.max_visible:
+            # Down arrow
+            down_btn_rect = pygame.Rect(self.rect.width - 40, self.rect.height - 30, 30, 20)
+            pygame.draw.rect(panel_surface, (80, 80, 80, 200), down_btn_rect)
+            pygame.draw.rect(panel_surface, (180, 180, 180, 150), down_btn_rect, 1)
+            pygame.draw.polygon(panel_surface, (255, 255, 255),
+                              [(down_btn_rect.centerx, down_btn_rect.bottom - 5),
+                               (down_btn_rect.centerx - 8, down_btn_rect.top + 5),
+                               (down_btn_rect.centerx + 8, down_btn_rect.top + 5)])
+        
+        # Draw instructions
+        help_text = font.render("Press ESC to close", True, (200, 200, 200))
+        help_rect = help_text.get_rect(centerx=self.rect.width // 2, bottom=self.rect.height - 8)
+        panel_surface.blit(help_text, help_rect)
+        
+        # Draw the panel
+        surface.blit(panel_surface, (self.rect.x, self.rect.y))
+
 class ToolManager:
     def __init__(self, level, grid):
         self.level = level
@@ -314,6 +500,10 @@ class ToolManager:
         self.ground_tool = GroundTool(level, grid)
         self.enemy_tool = EnemyTool(level, grid)
         self.delete_tool = DeleteTool(level, grid)
+        
+        # Create character selector
+        self.character_selector = CharacterSelector(level)
+        self.enemy_tool.character_selector = self.character_selector
         
         # Set default tool
         self.current_tool = self.platform_tool
@@ -331,8 +521,23 @@ class ToolManager:
     
     def handle_event(self, event, camera):
         """Pass events to the current tool"""
+        # First check if character selector needs to handle the event
+        if isinstance(self.current_tool, EnemyTool):
+            if self.character_selector.visible:
+                if self.character_selector.handle_event(event, self.current_tool):
+                    return True
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_c:
+                # Toggle character selector
+                self.character_selector.handle_event(event, self.current_tool)
+                return True
+                
+        # Then pass to the current tool
         self.current_tool.handle_event(event, camera)
     
     def render_preview(self, surface, camera):
         """Render the current tool's preview"""
         self.current_tool.render_preview(surface, camera)
+        
+        # Render character selector if visible
+        if isinstance(self.current_tool, EnemyTool) and self.character_selector.visible:
+            self.character_selector.render(surface)
