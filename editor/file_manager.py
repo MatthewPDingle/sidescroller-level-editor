@@ -88,25 +88,69 @@ class FileManager:
                 if 'background' in assets and assets['background']:
                     # Store the relative path from the JSON
                     relative_bg_path = assets['background']
+                    
+                    # Check if the path needs to be updated for the new directory structure
+                    if "backgrounds" not in relative_bg_path and "background_2048_512.png" in relative_bg_path:
+                        updated_path = os.path.join("resources", "graphics", "backgrounds", "background_2048_512.png")
+                        print(f"[DEBUG] Updating background path from {relative_bg_path} to {updated_path}")
+                        relative_bg_path = updated_path
+                    
                     self.level.bg_path = relative_bg_path
+                    
+                    # Check if path exists
+                    print(f"[DEBUG] Checking for background at: {relative_bg_path}")
+                    print(f"[DEBUG] Path exists: {os.path.exists(relative_bg_path)}")
                     
                     # If it's a relative path starting with "resources", use it directly
                     if os.path.exists(relative_bg_path):
-                        self.level.background = pygame.image.load(relative_bg_path).convert_alpha()
+                        try:
+                            print(f"[DEBUG] Loading background from: {relative_bg_path}")
+                            self.level.background = pygame.image.load(relative_bg_path).convert_alpha()
+                            print(f"[DEBUG] Background loaded successfully")
+                        except Exception as e:
+                            print(f"[ERROR] Failed to load background image: {e}")
+                            # Create a placeholder background
+                            self.level.background = pygame.Surface((2048, 512))
+                            self.level.background.fill((100, 150, 200))
                     else:
-                        print(f"Warning: Background image not found at {relative_bg_path}")
+                        print(f"[ERROR] Background image not found at {relative_bg_path}")
+                        # Create a placeholder background
+                        self.level.background = pygame.Surface((2048, 512))
+                        self.level.background.fill((100, 150, 200))
                 
                 # Load foreground
                 if 'foreground' in assets and assets['foreground']:
                     # Store the relative path from the JSON
                     relative_fg_path = assets['foreground']
+                    
+                    # Check if the path needs to be updated for the new directory structure
+                    if "backgrounds" not in relative_fg_path and "foreground_2048_512.png" in relative_fg_path:
+                        updated_path = os.path.join("resources", "graphics", "backgrounds", "foreground_2048_512.png")
+                        print(f"[DEBUG] Updating foreground path from {relative_fg_path} to {updated_path}")
+                        relative_fg_path = updated_path
+                    
                     self.level.fg_path = relative_fg_path
+                    
+                    # Check if path exists
+                    print(f"[DEBUG] Checking for foreground at: {relative_fg_path}")
+                    print(f"[DEBUG] Path exists: {os.path.exists(relative_fg_path)}")
                     
                     # If it's a relative path starting with "resources", use it directly
                     if os.path.exists(relative_fg_path):
-                        self.level.foreground = pygame.image.load(relative_fg_path).convert_alpha()
+                        try:
+                            print(f"[DEBUG] Loading foreground from: {relative_fg_path}")
+                            self.level.foreground = pygame.image.load(relative_fg_path).convert_alpha()
+                            print(f"[DEBUG] Foreground loaded successfully")
+                        except Exception as e:
+                            print(f"[ERROR] Failed to load foreground image: {e}")
+                            # Create a placeholder foreground
+                            self.level.foreground = pygame.Surface((2048, 512))
+                            self.level.foreground.fill((50, 100, 50, 128))
                     else:
-                        print(f"Warning: Foreground image not found at {relative_fg_path}")
+                        print(f"[ERROR] Foreground image not found at {relative_fg_path}")
+                        # Create a placeholder foreground
+                        self.level.foreground = pygame.Surface((2048, 512))
+                        self.level.foreground.fill((50, 100, 50, 128))
                 
             # Backward compatibility for older format
             elif 'bg_path' in level_data:
@@ -117,11 +161,31 @@ class FileManager:
                     if resources_index != -1:
                         path = path[resources_index:]
                 
+                # Check if the path needs to be updated for the new directory structure
+                if "backgrounds" not in path and "background_2048_512.png" in path:
+                    updated_path = os.path.join("resources", "graphics", "backgrounds", "background_2048_512.png")
+                    print(f"[DEBUG] Updating background path from {path} to {updated_path}")
+                    path = updated_path
+                
                 self.level.bg_path = path
+                print(f"[DEBUG] Checking for background at: {self.level.bg_path}")
+                print(f"[DEBUG] Path exists: {os.path.exists(self.level.bg_path)}")
+                
                 if os.path.exists(self.level.bg_path):
-                    self.level.background = pygame.image.load(self.level.bg_path).convert_alpha()
+                    try:
+                        print(f"[DEBUG] Loading background from: {self.level.bg_path}")
+                        self.level.background = pygame.image.load(self.level.bg_path).convert_alpha()
+                        print(f"[DEBUG] Background loaded successfully, size: {self.level.background.get_size()}")
+                    except Exception as e:
+                        print(f"[ERROR] Failed to load background image: {e}")
+                        # Create a placeholder background
+                        self.level.background = pygame.Surface((2048, 512))
+                        self.level.background.fill((100, 150, 200))
                 else:
-                    print(f"Warning: Background image not found at {self.level.bg_path}")
+                    print(f"[ERROR] Background image not found at {self.level.bg_path}")
+                    # Create a placeholder background
+                    self.level.background = pygame.Surface((2048, 512))
+                    self.level.background.fill((100, 150, 200))
             
             elif 'fg_path' in level_data:
                 # For older format, convert to relative path if needed
@@ -131,11 +195,31 @@ class FileManager:
                     if resources_index != -1:
                         path = path[resources_index:]
                 
+                # Check if the path needs to be updated for the new directory structure
+                if "backgrounds" not in path and "foreground_2048_512.png" in path:
+                    updated_path = os.path.join("resources", "graphics", "backgrounds", "foreground_2048_512.png")
+                    print(f"[DEBUG] Updating foreground path from {path} to {updated_path}")
+                    path = updated_path
+                
                 self.level.fg_path = path
+                print(f"[DEBUG] Checking for foreground at: {self.level.fg_path}")
+                print(f"[DEBUG] Path exists: {os.path.exists(self.level.fg_path)}")
+                
                 if os.path.exists(self.level.fg_path):
-                    self.level.foreground = pygame.image.load(self.level.fg_path).convert_alpha()
+                    try:
+                        print(f"[DEBUG] Loading foreground from: {self.level.fg_path}")
+                        self.level.foreground = pygame.image.load(self.level.fg_path).convert_alpha()
+                        print(f"[DEBUG] Foreground loaded successfully, size: {self.level.foreground.get_size()}")
+                    except Exception as e:
+                        print(f"[ERROR] Failed to load foreground image: {e}")
+                        # Create a placeholder foreground
+                        self.level.foreground = pygame.Surface((2048, 512))
+                        self.level.foreground.fill((50, 100, 50, 128))
                 else:
-                    print(f"Warning: Foreground image not found at {self.level.fg_path}")
+                    print(f"[ERROR] Foreground image not found at {self.level.fg_path}")
+                    # Create a placeholder foreground
+                    self.level.foreground = pygame.Surface((2048, 512))
+                    self.level.foreground.fill((50, 100, 50, 128))
             
             print(f"Level loaded from {filepath}")
             from main import LevelEditor

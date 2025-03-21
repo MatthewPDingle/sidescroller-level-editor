@@ -79,35 +79,53 @@ class LevelEditor:
         if bg_path:
             self.level.bg_path = bg_path
         else:
-            bg_path = os.path.join("resources", "graphics", "background_2048_512.png")
+            bg_path = os.path.join("resources", "graphics", "backgrounds", "background_2048_512.png")
             
         if fg_path:
             self.level.fg_path = fg_path
         else:
-            fg_path = os.path.join("resources", "graphics", "foreground_2048_512.png")
+            fg_path = os.path.join("resources", "graphics", "backgrounds", "foreground_2048_512.png")
         
         # Load background image
-        if os.path.exists(bg_path):
-            self.level.background = pygame.image.load(bg_path).convert_alpha()
-            self.level.bg_path = bg_path
-        else:
-            print(f"Warning: Could not load background image from {bg_path}")
+        try:
+            if os.path.exists(bg_path):
+                print(f"[DEBUG] Loading background from: {bg_path}")
+                self.level.background = pygame.image.load(bg_path).convert_alpha()
+                self.level.bg_path = bg_path
+                print(f"[DEBUG] Background loaded successfully, size: {self.level.background.get_size()}")
+            else:
+                print(f"[ERROR] Background image not found at path: {bg_path}")
+                # Create a placeholder background
+                self.level.background = pygame.Surface((2048, 512))
+                self.level.background.fill((100, 150, 200))
+                self.level.bg_path = None
+        except Exception as e:
+            print(f"[ERROR] Failed to load background image: {e}")
             # Create a placeholder background
             self.level.background = pygame.Surface((2048, 512))
             self.level.background.fill((100, 150, 200))
             self.level.bg_path = None
         
         # Load foreground image
-        if os.path.exists(fg_path):
-            self.level.foreground = pygame.image.load(fg_path).convert_alpha()
-            self.level.fg_path = fg_path
-            
-            # Adjust level height based on foreground height
-            fg_height = self.level.foreground.get_height()
-            self.level.height = fg_height // self.level.cell_size
-            self.level.height_pixels = fg_height
-        else:
-            print(f"Warning: Could not load foreground image from {fg_path}")
+        try:
+            if os.path.exists(fg_path):
+                print(f"[DEBUG] Loading foreground from: {fg_path}")
+                self.level.foreground = pygame.image.load(fg_path).convert_alpha()
+                self.level.fg_path = fg_path
+                print(f"[DEBUG] Foreground loaded successfully, size: {self.level.foreground.get_size()}")
+                
+                # Adjust level height based on foreground height
+                fg_height = self.level.foreground.get_height()
+                self.level.height = fg_height // self.level.cell_size
+                self.level.height_pixels = fg_height
+            else:
+                print(f"[ERROR] Foreground image not found at path: {fg_path}")
+                # Create a placeholder foreground
+                self.level.foreground = pygame.Surface((2048, 512))
+                self.level.foreground.fill((50, 100, 50, 128))
+                self.level.fg_path = None
+        except Exception as e:
+            print(f"[ERROR] Failed to load foreground image: {e}")
             # Create a placeholder foreground
             self.level.foreground = pygame.Surface((2048, 512))
             self.level.foreground.fill((50, 100, 50, 128))
@@ -140,11 +158,11 @@ class LevelEditor:
         # For now, just create placeholder sprites
         self.level.enemy_images = {}
         
-        armadillo_path = os.path.join("resources", "graphics", "armadillo_warrior_ss.png")
+        armadillo_path = os.path.join("resources", "graphics", "characters", "armadillo_warrior_ss.png")
         if os.path.exists(armadillo_path):
             self.level.enemy_images["armadillo"] = self.load_sprite_sheet(armadillo_path, 32, 32)[0]
         
-        scientist_path = os.path.join("resources", "graphics", "scientist_ss.png")
+        scientist_path = os.path.join("resources", "graphics", "characters", "scientist_ss.png")
         if os.path.exists(scientist_path):
             self.level.enemy_images["scientist"] = self.load_sprite_sheet(scientist_path, 32, 32)[0]
             
