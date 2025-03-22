@@ -82,7 +82,9 @@ class Level:
         enemy = {
             'x': x,
             'y': y,
-            'type': enemy_type
+            'type': enemy_type,
+            'direction': 'south',  # Default direction
+            'animation_frame': 3   # 4th frame (0-indexed) from 3rd row
         }
         self.enemies.append(enemy)
         
@@ -91,7 +93,32 @@ class Level:
             try:
                 from editor.utils.assets import load_sprite_sheet
                 enemy_path = f"resources/graphics/characters/{enemy_type}_ss.png"
-                self.enemy_images[enemy_type] = load_sprite_sheet(enemy_path, 32, 32)[0]
+                
+                # First, get the actual dimensions of the spritesheet
+                sheet = pygame.image.load(enemy_path).convert_alpha()
+                sheet_width = sheet.get_width()
+                sheet_height = sheet.get_height()
+                
+                # Calculate the true frame size based on a 4x4 grid in the sprite sheet
+                # This accounts for character sprites larger than 32x32
+                sprite_width = sheet_width // 4
+                sprite_height = sheet_height // 4
+                
+                print(f"[DEBUG] Loading {enemy_type} sprite sheet: {sheet_width}x{sheet_height}, frame size: {sprite_width}x{sprite_height}")
+                
+                # Load the sprite sheet with the correct frame size
+                sprite_sheet = load_sprite_sheet(enemy_path, sprite_width, sprite_height)
+                
+                # Standard setup for these sprite sheets - 4x4 grid with 16 frames
+                frames_per_row = 4
+                frame_index = 2 * frames_per_row + 3  # 3rd row (index 2) * frames per row + 4th frame (index 3)
+                
+                if len(sprite_sheet) > frame_index:
+                    self.enemy_images[enemy_type] = sprite_sheet[frame_index]
+                else:
+                    # Fallback to first frame if out of bounds
+                    self.enemy_images[enemy_type] = sprite_sheet[0]
+                    print(f"[DEBUG] Using fallback frame for {enemy_type}. Sheet has {len(sprite_sheet)} frames.")
             except Exception as e:
                 print(f"[ERROR] Could not load enemy image for {enemy_type}: {e}")
                 # Create a placeholder

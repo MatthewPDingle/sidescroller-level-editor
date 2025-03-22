@@ -213,17 +213,24 @@ class EnemyTool(Tool):
         self.enemy_type = enemy_type
     
     def render_preview(self, surface, camera):
+        # Save current clip area and remove any clipping to ensure the preview
+        # can extend beyond grid boundaries
+        original_clip = surface.get_clip()
+        surface.set_clip(None)
+        
         # Get current mouse position
         mouse_x, mouse_y = pygame.mouse.get_pos()
         
         # Skip if mouse is in UI area
         if mouse_y < Config.UI_PANEL_HEIGHT:
+            surface.set_clip(original_clip)
             return
             
         grid_x, grid_y = self.grid.screen_to_grid(mouse_x, mouse_y, camera)
         
         # Skip if outside level bounds
         if grid_x >= self.level.width or grid_y >= self.level.height or grid_x < 0 or grid_y < 0:
+            surface.set_clip(original_clip)
             return
             
         screen_x, screen_y = self.grid.grid_to_screen(grid_x, grid_y, camera)
@@ -231,19 +238,34 @@ class EnemyTool(Tool):
         # Draw the enemy preview
         if self.enemy_type in self.level.enemy_images:
             sprite = self.level.enemy_images[self.enemy_type]
-            # Bottom-center alignment
-            sprite_x = screen_x - sprite.get_width() // 2 + self.grid.cell_size // 2
-            sprite_y = screen_y + self.grid.cell_size - sprite.get_height()
             
-            # Draw with transparency
+            # Position sprite so bottom-center aligns with grid cell position
+            adjusted_x = screen_x + (self.grid.cell_size // 2) - (sprite.get_width() // 2)
+            adjusted_y = screen_y + self.grid.cell_size - sprite.get_height()
+            
+            # Draw with transparency (entire sprite, regardless of grid boundaries)
             preview_sprite = sprite.copy()
             preview_sprite.set_alpha(128)
-            surface.blit(preview_sprite, (sprite_x, sprite_y))
+            
+            # Add a visual indicator at the grid cell position
+            marker = pygame.Surface((6, 6))
+            marker.fill((255, 255, 0))  # Yellow marker
+            
+            # Display the sprite and marker
+            surface.blit(preview_sprite, (adjusted_x, adjusted_y))
+            surface.blit(marker, (screen_x + self.grid.cell_size//2 - 3, screen_y + self.grid.cell_size - 3))
+            
+            # Draw a small outline around the grid cell for clarity
+            pygame.draw.rect(surface, (255, 255, 0), 
+                           (screen_x, screen_y, self.grid.cell_size, self.grid.cell_size), 1)
         else:
             # Fallback preview
             preview_surface = pygame.Surface((self.grid.cell_size, self.grid.cell_size), pygame.SRCALPHA)
             preview_surface.fill((255, 0, 0, 128))  # Semi-transparent red
             surface.blit(preview_surface, (screen_x, screen_y))
+        
+        # Restore original clip area
+        surface.set_clip(original_clip)
 
 class DeleteTool(Tool):
     def __init__(self, level, grid):
@@ -333,9 +355,31 @@ class CharacterSelector:
         """Load preview images for all characters"""
         for char in self.characters:
             try:
-                # Load the first frame of each sprite sheet for preview
+                # Load the sprite sheet for preview
                 sheet = pygame.image.load(char["path"]).convert_alpha()
-                char["preview"] = sheet.subsurface((0, 0, 32, 32))
+                sheet_width = sheet.get_width()
+                sheet_height = sheet.get_height()
+                
+                # Calculate the true frame size based on a 4x4 grid in the sprite sheet
+                sprite_width = sheet_width // 4
+                sprite_height = sheet_height // 4
+                
+                # Get the 4th frame from the 3rd row (south-facing, standing position)
+                frames_per_row = 4
+                frame_index = 2 * frames_per_row + 3  # 3rd row (index 2) * frames per row + 4th frame (index 3)
+                
+                frame_x = (frame_index % 4) * sprite_width
+                frame_y = (frame_index // 4) * sprite_height
+                
+                # Extract the correct frame
+                frame = sheet.subsurface((frame_x, frame_y, sprite_width, sprite_height))
+                
+                # Scale down to 25% of original size for the menu preview
+                scaled_width = sprite_width // 4
+                scaled_height = sprite_height // 4
+                char["preview"] = pygame.transform.smoothscale(frame, (scaled_width, scaled_height))
+                
+                print(f"[DEBUG] Character preview for {char['name']}: original {sprite_width}x{sprite_height}, scaled {scaled_width}x{scaled_height}")
             except Exception as e:
                 print(f"[ERROR] Could not load preview for {char['name']}: {e}")
                 # Create a placeholder
@@ -453,12 +497,24 @@ class CharacterSelector:
             
             # Draw character preview image
             if "preview" in char:
-                preview_rect = char["preview"].get_rect(midleft=(item_rect.left + 5, item_rect.centery))
-                panel_surface.blit(char["preview"], preview_rect)
+                # Center the preview vertically and leave a small margin from the left
+                preview_image = char["preview"]
+                preview_left_margin = 10
+                
+                # Calculate placement to center vertically in the item
+                preview_y = item_rect.centery - preview_image.get_height() // 2
+                preview_rect = preview_image.get_rect(topleft=(item_rect.left + preview_left_margin, preview_y))
+                panel_surface.blit(preview_image, preview_rect)
+                
+                # Adjust text position based on the preview size
+                text_left_margin = preview_left_margin + preview_image.get_width() + 10
+            else:
+                # No preview image, use default margin
+                text_left_margin = 45
             
-            # Draw character name
+            # Draw character name with adjusted position
             text = font.render(char["display_name"], True, (255, 255, 255))
-            text_rect = text.get_rect(midleft=(item_rect.left + 45, item_rect.centery))
+            text_rect = text.get_rect(midleft=(item_rect.left + text_left_margin, item_rect.centery))
             panel_surface.blit(text, text_rect)
         
         # Draw scroll indicators if needed

@@ -165,7 +165,31 @@ class LevelEditor:
         for char in character_list:
             try:
                 if os.path.exists(char["path"]):
-                    self.level.enemy_images[char["name"]] = load_sprite_sheet(char["path"], 32, 32)[0]
+                    # First, get the actual dimensions of the spritesheet
+                    sheet = pygame.image.load(char["path"]).convert_alpha()
+                    sheet_width = sheet.get_width()
+                    sheet_height = sheet.get_height()
+                    
+                    # Calculate the true frame size based on a 4x4 grid in the sprite sheet
+                    # This accounts for character sprites larger than 32x32
+                    sprite_width = sheet_width // 4
+                    sprite_height = sheet_height // 4
+                    
+                    print(f"[DEBUG] Loading {char['name']} sprite sheet: {sheet_width}x{sheet_height}, frame size: {sprite_width}x{sprite_height}")
+                    
+                    # Load spritesheet with the correct frame size
+                    sprite_sheet = load_sprite_sheet(char["path"], sprite_width, sprite_height)
+                    
+                    # Extract the correct frame (4th frame from the 3rd row)
+                    frames_per_row = 4  # Standard format for these sprite sheets
+                    frame_index = 2 * frames_per_row + 3  # 3rd row (index 2) * frames per row + 4th frame (index 3)
+                    
+                    if len(sprite_sheet) > frame_index:
+                        self.level.enemy_images[char["name"]] = sprite_sheet[frame_index]
+                    else:
+                        # Fallback to first frame if index is out of bounds
+                        self.level.enemy_images[char["name"]] = sprite_sheet[0]
+                        print(f"[DEBUG] Using fallback frame for {char['name']}. Sheet has {len(sprite_sheet)} frames.")
             except Exception as e:
                 print(f"[ERROR] Could not load sprite for {char['name']}: {e}")
                 # Create a placeholder sprite
@@ -393,6 +417,11 @@ class LevelEditor:
         self.screen.set_clip(original_clip)
     
     def render_level_elements(self):
+        # Save the current clip area to restore later
+        original_clip = self.screen.get_clip()
+        # Remove any clipping to ensure sprites can render fully
+        self.screen.set_clip(None)
+        
         # Render platforms
         for platform in self.level.platforms:
             screen_x = platform['x'] * self.grid.cell_size - self.camera.x
@@ -425,21 +454,49 @@ class LevelEditor:
             screen_x = enemy['x'] * self.grid.cell_size - self.camera.x
             screen_y = enemy['y'] * self.grid.cell_size + Config.UI_PANEL_HEIGHT
             
-            if (screen_x + self.grid.cell_size > 0 and 
-                screen_x < Config.WINDOW_WIDTH):
+            enemy_type = enemy.get('type', 'armadillo')
+            
+            # Draw the enemy sprite if it's in the level image dictionary
+            if enemy_type in self.level.enemy_images:
+                sprite = self.level.enemy_images[enemy_type]
+                sprite_width = sprite.get_width()
+                sprite_height = sprite.get_height()
                 
-                enemy_type = enemy.get('type', 'armadillo')
-                if enemy_type in self.level.enemy_images:
-                    sprite = self.level.enemy_images[enemy_type]
-                    sprite_x = screen_x - sprite.get_width() // 2 + self.grid.cell_size // 2
-                    sprite_y = screen_y + self.grid.cell_size - sprite.get_height()
+                # Calculate the actual position of the sprite - center horizontally and align bottom with grid cell
+                sprite_x = screen_x + (self.grid.cell_size // 2) - (sprite_width // 2)
+                sprite_y = screen_y + self.grid.cell_size - sprite_height
+                
+                # Check if any part of the sprite is roughly in the visible area (with some margin)
+                margin = 64  # Allow sprites partially off-screen to still render
+                if (sprite_x + sprite_width > -margin and 
+                    sprite_x < Config.WINDOW_WIDTH + margin and
+                    sprite_y + sprite_height > Config.UI_PANEL_HEIGHT - margin and
+                    sprite_y < Config.WINDOW_HEIGHT + margin):
+                    
+                    # Draw the sprite (without any clip restrictions)
                     self.screen.blit(sprite, (sprite_x, sprite_y))
-                else:
+                    
+                    # Draw a small indicator dot at the actual grid position for debugging
+                    if False:  # Set to True to enable position debugging
+                        pygame.draw.rect(
+                            self.screen,
+                            (255, 255, 0),
+                            (screen_x + self.grid.cell_size//2 - 2, 
+                             screen_y + self.grid.cell_size - 2, 
+                             4, 4)
+                        )
+            else:
+                # Fallback if sprite not found - only if cell is visible
+                if (screen_x + self.grid.cell_size > 0 and 
+                    screen_x < Config.WINDOW_WIDTH):
                     pygame.draw.rect(
                         self.screen,
                         (255, 0, 0),
                         (screen_x, screen_y, self.grid.cell_size, self.grid.cell_size)
                     )
+        
+        # Restore original clip area
+        self.screen.set_clip(original_clip)
     
     def render_mouse_position(self):
         mouse_x, mouse_y = pygame.mouse.get_pos()
